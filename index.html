@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>福利資源地圖</title>
+    <link rel="stylesheet" href="styles.css">
+    <script>
+    // 定義一個全局函數，用於在API載入後初始化地圖
+    function initMap() {
+      // 僅在script.js已載入並且initializeMap函數已定義後調用
+      if (window.initializeMap) {
+        window.initializeMap();
+      } else {
+        console.error("script.js未正確載入或初始化函數未定義");
+      }
+    }
+    </script>
+</head>
+<body>
+    <header>
+        <h1>福利資源地圖</h1>
+    </header>
+    <div class="container">
+        <div class="sidebar">
+            <div class="filter-section">
+                <h3>搜尋資源</h3>
+                <input type="text" class="search-box" id="search-input" placeholder="搜尋關鍵字、地址或服務">
+            </div>
+            <div class="filter-section">
+                <h3>資源類型</h3>
+                <div class="category-filter" id="category-filters">
+                    <button class="category-btn active" data-category="all">全部</button>
+                    <button class="category-btn" data-category="foundation">基金會</button>
+                    <button class="category-btn" data-category="chief">里長</button>
+                    <button class="category-btn" data-category="church">教會</button>
+                    <button class="category-btn" data-category="locksmith">鎖匠</button>
+                </div>
+            </div>
+            <div class="filter-section">
+                <h3>資源列表</h3>
+                <div class="resource-list" id="resource-list">
+                    <!-- 資源列表將動態生成 -->
+                </div>
+            </div>
+        </div>
+        <div id="map"></div><div id="directions-panel" style="display: none; background: white; padding: 10px; margin-top: 10px; max-height: 300px; overflow-y: auto; border: 1px solid #ddd;"></div>
+    </div>
+
+    <!-- 先載入您的腳本 -->
+    <script src="script.js"></script>
+    <!-- 然後載入 Google Maps API -->
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAw8hYJEbeR3vMJrGcP73b84cDvIs6agxs&libraries=places,directions&callback=initMap" async defer></script>
+</body>
+</html>
