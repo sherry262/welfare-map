@@ -14,6 +14,47 @@ window.onerror = function(message, source, lineno, colno, error) {
     return false;
 };
 
+// 檢測設備是否為手機
+function isMobileDevice() {
+    return (window.innerWidth <= 768);
+}
+
+// 添加手機控制元素
+function addMobileControls() {
+    if (isMobileDevice()) {
+        // 創建一個切換按鈕
+        const toggleButton = document.createElement('div');
+        toggleButton.innerHTML = '顯示路線';
+        toggleButton.style.position = 'absolute';
+        toggleButton.style.bottom = '20px';
+        toggleButton.style.left = '50%';
+        toggleButton.style.transform = 'translateX(-50%)';
+        toggleButton.style.backgroundColor = '#4285F4';
+        toggleButton.style.color = 'white';
+        toggleButton.style.padding = '10px 15px';
+        toggleButton.style.borderRadius = '20px';
+        toggleButton.style.display = 'none';
+        toggleButton.style.zIndex = '1000';
+        toggleButton.style.cursor = 'pointer';
+        toggleButton.style.boxShadow = '0 2px 5px rgba(0,0,0,0.3)';
+        toggleButton.style.fontWeight = 'bold';
+        toggleButton.id = 'toggle-directions';
+        
+        toggleButton.onclick = function() {
+            const panel = document.getElementById('directions-panel');
+            if (panel.style.display === 'none') {
+                panel.style.display = 'block';
+                this.innerHTML = '隱藏路線';
+            } else {
+                panel.style.display = 'none';
+                this.innerHTML = '顯示路線';
+            }
+        };
+        
+        document.body.appendChild(toggleButton);
+    }
+}
+
 // 資源將從CSV中讀取
 let resources = [];
 
@@ -89,6 +130,9 @@ window.initializeMap = function() {
             filterResources();
         });
     });
+    
+    // 添加手機控制元素
+    addMobileControls();
 };
 
 // 使用XMLHttpRequest載入CSV
@@ -182,7 +226,7 @@ function parseCSV(csvData) {
     const headers = rows[0].split(',');
     debugLog('CSV標題行:', headers);
     
-    // 找出各欄位的索引位置
+    // 找出各欄位的索引位置（更寬容的匹配方式）
     const nameIndex = headers.findIndex(h => 
         h.trim().includes('名稱') || 
         h.trim().includes('機構') || 
@@ -224,7 +268,7 @@ function parseCSV(csvData) {
         // 跳過空行
         if (rows[i].trim() === '') continue;
         
-        // 分割欄位
+        // 分割欄位（處理可能包含逗號的欄位）
         const columns = rows[i].split(',');
         
         // 如果欄位數不夠，跳過這一行
@@ -463,6 +507,14 @@ function showDirectionsWithCurrentLocation(destAddress, destLat, destLng) {
             };
             debugLog("成功獲取用戶位置:", origin);
             calculateRoute(origin, destAddress, destLat, destLng);
+            
+            // 顯示切換按鈕（僅在手機上）
+            if (isMobileDevice()) {
+                const toggleButton = document.getElementById('toggle-directions');
+                if (toggleButton) {
+                    toggleButton.style.display = 'block';
+                }
+            }
         },
         function(error) {
             debugLog("獲取位置失敗:", error);
@@ -489,6 +541,14 @@ function showDirectionsWithCustomLocation(destAddress, destLat, destLng) {
             const origin = results[0].geometry.location;
             debugLog("出發地地理編碼成功:", startAddress, origin);
             calculateRoute(origin, destAddress, destLat, destLng);
+            
+            // 顯示切換按鈕（僅在手機上）
+            if (isMobileDevice()) {
+                const toggleButton = document.getElementById('toggle-directions');
+                if (toggleButton) {
+                    toggleButton.style.display = 'block';
+                }
+            }
         } else {
             debugLog("出發地地理編碼失敗:", status);
             alert("無法識別出發地址「" + startAddress + "」，請提供更精確的地址。");
