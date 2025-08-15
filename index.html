@@ -5,11 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>福利資源地圖</title>
     
-    <!-- Leaflet CSS - 移除integrity檢查 -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" 
-          crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" 
+          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" 
+          crossorigin=""/>
     
     <style>
+        /* 自定義應用樣式 */
         body {
             font-family: 'Arial', sans-serif;
             margin: 0;
@@ -44,9 +46,7 @@
         #map {
             flex: 1;
             height: 100%;
-            min-height: 500px;
-            width: 100%;
-            z-index: 1;
+            min-height: 400px;
         }
         
         .filter-section {
@@ -60,7 +60,7 @@
         }
         
         .resource-list {
-            max-height: 400px;
+            max-height: 300px;
             overflow-y: auto;
             border: 1px solid #ddd;
             border-radius: 4px;
@@ -82,12 +82,6 @@
         .resource-item.active {
             background-color: #e3f2fd;
             border-left: 4px solid #4285F4;
-        }
-        
-        .resource-item-details {
-            margin-top: 5px;
-            font-size: 12px;
-            color: #666;
         }
         
         .search-box {
@@ -131,38 +125,36 @@
             color: #666;
         }
         
-        .notice {
-            padding: 10px;
-            background: #fff3cd;
-            border: 1px solid #ffeaa7;
-            border-radius: 4px;
-            margin-bottom: 10px;
-            font-size: 14px;
-        }
-        
-        .custom-marker {
-            background: transparent !important;
-            border: none !important;
-        }
-        
+        /* 自定義彈出窗口樣式 */
         .custom-popup .leaflet-popup-content-wrapper {
             border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
         }
         
-        .custom-popup .leaflet-popup-content {
-            margin: 12px 16px;
-            line-height: 1.4;
+        .popup-content h3 {
+            margin: 0 0 10px 0;
+            color: #4285F4;
+            font-size: 16px;
         }
         
-        /* 確保地圖容器正確顯示 */
-        .leaflet-container {
-            background: #f8f9fa;
+        .popup-content p {
+            margin: 5px 0;
+            font-size: 13px;
         }
         
-        /* 修正地圖載入問題 */
-        .leaflet-tile {
-            filter: none;
+        .route-btn {
+            background-color: #4285F4;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            margin: 5px 2px 0 0;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        
+        .route-btn:hover {
+            background-color: #3367d6;
         }
         
         @media (max-width: 768px) {
@@ -173,8 +165,9 @@
                 width: auto;
                 max-height: 200px;
             }
-            #map {
-                min-height: 400px;
+            .category-btn {
+                font-size: 11px;
+                padding: 4px 8px;
             }
         }
     </style>
@@ -205,7 +198,7 @@
             </div>
             
             <div class="filter-section">
-                <h3>資源列表 <small style="color: #666;">(共133筆)</small></h3>
+                <h3>資源列表</h3>
                 <div class="resource-list" id="resource-list">
                     <div class="loading">正在載入地圖...</div>
                 </div>
@@ -215,25 +208,35 @@
         <div id="map"></div>
     </div>
 
-    <!-- Leaflet JavaScript - 移除integrity檢查 -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js" 
-            crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <!-- Leaflet JavaScript -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" 
+            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" 
+            crossorigin=""></script>
     
     <script>
+        // 調試模式
+        const DEBUG = true;
+        
+        function debugLog(...args) {
+            if (DEBUG) {
+                console.log(`[${new Date().toISOString()}]`, ...args);
+            }
+        }
+        
         // 資源數據和變量
         let resources = [];
         let markers = [];
-        let map = null;
-        let markersLayer = null;
+        let map;
+        let markersLayer;
         
         // 資源類別對應的顏色
         const categoryColors = {
-            foundation: '#FF5722',
-            chief: '#4CAF50',
-            church: '#2196F3',
-            locksmith: '#FFC107',
-            temple: '#9C27B0',
-            lawyer: '#FF9800'
+            foundation: '#FF5722',    // 橙色 - 基金會
+            chief: '#4CAF50',         // 綠色 - 里長
+            church: '#2196F3',        // 藍色 - 教會
+            locksmith: '#FFC107',     // 黃色 - 鎖匠
+            temple: '#9C27B0',        // 紫色 - 宮廟
+            lawyer: '#FF9800'         // 橘色 - 律師事務所
         };
         
         // 資源類別對應的中文名稱
@@ -246,373 +249,151 @@
             lawyer: '律師事務所'
         };
 
-        // 完整資源數據（133筆）
+        // 預設資源數據（桃園市實際坐標）
         const resourcesData = [
-            // 教會（12筆）
-            {id: 'CH001', name: '財團法人中國基督教靈糧世界佈道會桃園市府靈糧堂', category: 'church', address: '桃園市桃園區縣府路332-4號5樓', phone: '336-5919', lat: 24.9736, lng: 121.281},
-            {id: 'CH002', name: '財團法人桃園市基督教新歌教會', category: 'church', address: '桃園市桃園區國華街2號', phone: '335-7581', lat: 24.9736, lng: 121.291},
-            {id: 'CH003', name: '財團法人天主教麒田教會', category: 'church', address: '桃園市桃園區中山路956巷91弄5號', phone: '370-3517', lat: 24.9736, lng: 121.301},
-            {id: 'CH004', name: '財團法人臺灣省桃園縣中國基督教靈糧世界佈道會桃園靈糧堂', category: 'church', address: '桃園市桃園區中正路1067號5樓', phone: '356-9317', lat: 24.9736, lng: 121.311},
-            {id: 'CH005', name: '財團法人新約教會桃園教會', category: 'church', address: '桃園市桃園區大業路二段58號7樓', phone: '325-2603', lat: 24.9836, lng: 121.281},
-            {id: 'CH006', name: '財團法人桃園基督的教會', category: 'church', address: '桃園市桃園區三民路三段286號5樓', phone: '281-0735', lat: 24.9836, lng: 121.291},
-            {id: 'CH007', name: '財團法人臺灣省桃園縣福音信義會', category: 'church', address: '桃園市桃園區大豐路222號', phone: '364-5900', lat: 24.9836, lng: 121.301},
-            {id: 'CH008', name: '財團法人臺灣基督長老教會桃園教會', category: 'church', address: '桃園市桃園區民生路208號6樓', phone: '332-4063', lat: 24.9836, lng: 121.311},
-            {id: 'CH009', name: '財團法人沙爾德聖保祿修女會', category: 'church', address: '桃園市桃園區建新街123號', phone: '361-3141', lat: 24.9936, lng: 121.281},
-            {id: 'CH010', name: '財團法人臺灣省桃園縣中華福音道路德會仁愛堂區會', category: 'church', address: '桃園市桃園區縣府路110號13樓', phone: '362-5539', lat: 24.9936, lng: 121.291},
-            {id: 'CH011', name: '財團法人桃園市臺灣基督長老教會迦南教會', category: 'church', address: '桃園市桃園區中華路49號', phone: '333-9075', lat: 24.9936, lng: 121.301},
-            {id: 'CH012', name: '財團法人臺灣省桃園縣桃園市中華基督教浸信會溢恩堂', category: 'church', address: '桃園市桃園市桃園區東國街55號', phone: '335-3106', lat: 24.9936, lng: 121.311},
+            // 教會
+            {id: 'CH001', name: '財團法人中國基督教靈糧世界佈道會桃園市府靈糧堂', category: 'church', address: '桃園市桃園區縣府路332-4號5樓', phone: '336-5919', lat: 24.9936, lng: 121.3010},
+            {id: 'CH002', name: '財團法人桃園市基督教新歌教會', category: 'church', address: '桃園市桃園區國華街2號', phone: '335-7581', lat: 24.9956, lng: 121.2990},
+            {id: 'CH003', name: '財團法人天主教麒田教會', category: 'church', address: '桃園市桃園區中山路956巷91弄5號', phone: '370-3517', lat: 24.9916, lng: 121.3030},
+            {id: 'CH004', name: '財團法人臺灣省桃園縣中國基督教靈糧世界佈道會桃園靈糧堂', category: 'church', address: '桃園市桃園區中正路1067號5樓', phone: '356-9317', lat: 24.9896, lng: 121.3050},
+            {id: 'CH005', name: '財團法人新約教會桃園教會', category: 'church', address: '桃園市桃園區大業路二段58號7樓', phone: '325-2603', lat: 24.9976, lng: 121.2970},
 
-            // 基金會（15筆）
-            {id: 'FD001', name: '財團法人桃園市怡仁愛心基金會', category: 'foundation', address: '桃園市桃園區三民路3段106號15樓', phone: '336-9066', lat: 24.9736, lng: 121.281},
-            {id: 'FD002', name: '財團法人桃園市私立護國宮愛心基金會', category: 'foundation', address: '桃園市桃園區國際路1段401巷123號', phone: '362-1111', lat: 24.9736, lng: 121.291},
-            {id: 'FD003', name: '財團法人桃園市私立簡欣哲社會福利基金會', category: 'foundation', address: '桃園市桃園區復興路180號6樓', phone: '336-6512', lat: 24.9736, lng: 121.301},
-            {id: 'FD004', name: '財團法人桃園市私立景福宮慈善基金會', category: 'foundation', address: '桃園市桃園區中正路208號', phone: '332-4672', lat: 24.9736, lng: 121.311},
-            {id: 'FD005', name: '財團法人桃園市私立天立社會福利基金會', category: 'foundation', address: '桃園市桃園區樹仁三街601號', phone: '367-7666', lat: 24.9836, lng: 121.281},
-            {id: 'FD006', name: '財團法人桃園市私立元極康福慈善事業基金會', category: 'foundation', address: '桃園市桃園區莊敬路一段128號2樓', phone: '326-2677', lat: 24.9836, lng: 121.291},
-            {id: 'FD007', name: '財團法人桃園市忠義社會福利慈善事業基金會', category: 'foundation', address: '桃園市桃園區大有路80號', phone: '333-7748', lat: 24.9836, lng: 121.301},
-            {id: 'FD008', name: '財團法人桃園市淳皓宏善基金會', category: 'foundation', address: '桃園市桃園區三元街407巷50號', phone: '332-8253', lat: 24.9836, lng: 121.311},
-            {id: 'FD009', name: '財團法人桃園市福島健康慈善基金會', category: 'foundation', address: '桃園市桃園區泰成路62巷39號2樓', phone: '0932-362847', lat: 24.9936, lng: 121.281},
-            {id: 'FD010', name: '財團法人桃園市優勝地社會福利基金會', category: 'foundation', address: '桃園市桃園區中平路98號3樓之3', phone: '2541-8098', lat: 24.9936, lng: 121.291},
-            {id: 'FD011', name: '財團法人腦性麻痺基金會', category: 'foundation', address: '桃園市桃園區中正路915號6樓之4', phone: '0916-577558', lat: 24.9936, lng: 121.301},
-            {id: 'FD012', name: '財團法人桃園市安順社會福利慈善事業基金會 ', category: 'foundation', address: '桃園市桃園區民有東路1巷3號5樓', phone: '2733-7593', lat: 24.9936, lng: 121.311},
-            {id: 'FD013', name: '財團法人桃園市宏願天使希望基金會', category: 'foundation', address: '桃園市桃園區同安街108號', phone: '317-9558', lat: 25.0036, lng: 121.281},
-            {id: 'FD014', name: '財團法人桃園市晉利工程社會福利慈善事業基金會', category: 'foundation', address: '桃園市桃園區經國路838號10樓之1', phone: '326-9266', lat: 25.0036, lng: 121.291},
-            {id: 'FD015', name: '財團法人慈濟桃園分會', category: 'foundation', address: '桃園市桃園區大業路一段307號', phone: '358-6111', lat: 25.0036, lng: 121.301},
+            // 基金會
+            {id: 'FD001', name: '財團法人桃園市怡仁愛心基金會', category: 'foundation', address: '桃園市桃園區三民路3段106號15樓', phone: '336-9066', lat: 24.9946, lng: 121.3000},
+            {id: 'FD002', name: '財團法人桃園市私立護國宮愛心基金會', category: 'foundation', address: '桃園市桃園區國際路1段401巷123號', phone: '362-1111', lat: 24.9926, lng: 121.3020},
+            {id: 'FD003', name: '財團法人桃園市私立簡欣哲社會福利基金會', category: 'foundation', address: '桃園市桃園區復興路180號6樓', phone: '336-6512', lat: 24.9966, lng: 121.2980},
+            {id: 'FD004', name: '財團法人桃園市私立景福宮慈善基金會', category: 'foundation', address: '桃園市桃園區中正路208號', phone: '332-4672', lat: 24.9906, lng: 121.3040},
+            {id: 'FD005', name: '財團法人桃園市私立天立社會福利基金會', category: 'foundation', address: '桃園市桃園區樹仁三街601號', phone: '367-7666', lat: 24.9886, lng: 121.3060},
 
-            // 鎖匠（15筆）
-            {id: 'LK001', name: '鎖庫智能家電子鎖體驗館桃園旗艦店', category: 'locksmith', address: '桃園市桃園區春日路455號', phone: '347-6369', lat: 24.9736, lng: 121.281},
-            {id: 'LK002', name: '關外高手刻印鎖店', category: 'locksmith', address: '桃園市桃園區長春路126號', phone: '333-9876', lat: 24.9736, lng: 121.291},
-            {id: 'LK003', name: '建成鎖行', category: 'locksmith', address: '桃園市桃園區建國路53號', phone: '364-5866', lat: 24.9736, lng: 121.301},
-            {id: 'LK004', name: '永吉鎖匙刻印行', category: 'locksmith', address: '桃園市桃園區永安路632號', phone: '355-3141', lat: 24.9736, lng: 121.311},
-            {id: 'LK005', name: '振聲鎖印行', category: 'locksmith', address: '桃園市桃園區復興路468號', phone: '0955-271938', lat: 24.9836, lng: 121.281},
-            {id: 'LK006', name: '眾利鎖匙刻印', category: 'locksmith', address: '桃園市桃園區中山路697號', phone: '228-8505', lat: 24.9836, lng: 121.291},
-            {id: 'LK007', name: '桃鶯刻印鑰匙店', category: 'locksmith', address: '桃園市桃園區桃鶯路202之3號', phone: '367-3742', lat: 24.9836, lng: 121.301},
-            {id: 'LK008', name: '正安鎖店', category: 'locksmith', address: '桃園市桃園區中山路17號', phone: '0935-567985', lat: 24.9836, lng: 121.311},
-            {id: 'LK009', name: '金宏刻印鎖店', category: 'locksmith', address: '桃園市桃園區民安路91號', phone: '331-3566', lat: 24.9936, lng: 121.281},
-            {id: 'LK010', name: '大郡鎖匙刻印', category: 'locksmith', address: '桃園市桃園區莊敬路一段198號', phone: '356-9569', lat: 24.9936, lng: 121.291},
-            {id: 'LK011', name: '大慶鎖匙刻印店', category: 'locksmith', address: '桃園市桃園區中山路37號', phone: '333-8866', lat: 24.9936, lng: 121.301},
-            {id: 'LK012', name: '寶慶鎖匙刻印', category: 'locksmith', address: '桃園市桃園區寶慶路398號', phone: '301-7133', lat: 24.9936, lng: 121.311},
-            {id: 'LK013', name: '順新刻印鎖行', category: 'locksmith', address: '桃園市桃園市寶山街65號', phone: '325-5355', lat: 25.0036, lng: 121.281},
-            {id: 'LK014', name: '永祥刻印鎖匙行', category: 'locksmith', address: '桃園市桃園區力行路232號', phone: '333-8818', lat: 25.0036, lng: 121.291},
-            {id: 'LK015', name: '品宏刻印鎖行', category: 'locksmith', address: '桃園市桃園區大同路102號', phone: '0987-132116', lat: 25.0036, lng: 121.301},
+            // 鎖匠
+            {id: 'LK001', name: '鎖庫智能家電子鎖體驗館桃園旗艦店', category: 'locksmith', address: '桃園市桃園區春日路455號', phone: '347-6369', lat: 24.9956, lng: 121.3000},
+            {id: 'LK002', name: '關外高手刻印鎖店', category: 'locksmith', address: '桃園市桃園區長春路126號', phone: '333-9876', lat: 24.9936, lng: 121.3020},
+            {id: 'LK003', name: '建成鎖行', category: 'locksmith', address: '桃園市桃園區建國路53號', phone: '364-5866', lat: 24.9916, lng: 121.3040},
+            {id: 'LK004', name: '永吉鎖匙刻印行', category: 'locksmith', address: '桃園市桃園區永安路632號', phone: '355-3141', lat: 24.9976, lng: 121.2980},
+            {id: 'LK005', name: '振聲鎖印行', category: 'locksmith', address: '桃園市桃園區復興路468號', phone: '0955-271938', lat: 24.9896, lng: 121.3060},
 
-            // 里長（82筆）
-            {id: 'CV001', name: '大林里里長', category: 'chief', address: '桃園市桃園區樹仁三街68號', phone: '363-9988', lat: 24.9736, lng: 121.281},
-            {id: 'CV002', name: '大樹里里長', category: 'chief', address: '桃園市桃園區樹仁二街176號', phone: '0919-354002', lat: 24.9736, lng: 121.289},
-            {id: 'CV003', name: '大豐里里長', category: 'chief', address: '桃園市桃園區樹林四街38巷12號', phone: '366-5511', lat: 24.9736, lng: 121.297},
-            {id: 'CV004', name: '建國里里長', category: 'chief', address: '桃園市桃園區林森路68巷1弄6號', phone: '361-0068', lat: 24.9736, lng: 121.305},
-            {id: 'CV005', name: '雲林里里長', category: 'chief', address: '桃園市桃園區延平路103號', phone: '363-2233', lat: 24.9736, lng: 121.313},
-            {id: 'CV006', name: '福安里里長', category: 'chief', address: '桃園市桃園區建華三街60號', phone: '363-7103', lat: 24.9736, lng: 121.321},
-            {id: 'CV007', name: '福林里里長', category: 'chief', address: '桃園市桃園區陽明一街103號', phone: '371-0601', lat: 24.9736, lng: 121.329},
-            {id: 'CV008', name: '豐林里里長', category: 'chief', address: '桃園市桃園區建國路211號', phone: '0928-555535', lat: 24.9736, lng: 121.337},
-            {id: 'CV009', name: '中和里里長', category: 'chief', address: '桃園市桃園區博愛路8號', phone: '334-6254', lat: 24.9736, lng: 121.345},
-            {id: 'CV010', name: '中興里里長', category: 'chief', address: '桃園市桃園區忠五路73號', phone: '0900-253392', lat: 24.9736, lng: 121.353},
-            {id: 'CV011', name: '中成里里長', category: 'chief', address: '桃園市桃園區復興路232號7樓之2', phone: '0921-508-388', lat: 24.9816, lng: 121.281},
-            {id: 'CV012', name: '中山里里長', category: 'chief', address: '桃園市桃園區復興路161號', phone: '331-7568', lat: 24.9816, lng: 121.289},
-            {id: 'CV013', name: '中埔里里長', category: 'chief', address: '桃園市桃園區新埔六街89號', phone: '463-3301', lat: 24.9816, lng: 121.297},
-            {id: 'CV014', name: '中聖里里長', category: 'chief', address: '桃園市桃園區聖民路110號', phone: '363-0003', lat: 24.9816, lng: 121.305},
-            {id: 'CV015', name: '中德里里長', category: 'chief', address: '桃園市桃園區德民街29號', phone: '366-2003', lat: 24.9816, lng: 121.313},
-            {id: 'CV016', name: '中原里里長', category: 'chief', address: '桃園市桃園區經國路173巷11號', phone: '333-7776', lat: 24.9816, lng: 121.321},
-            {id: 'CV017', name: '中路里里長', category: 'chief', address: '桃園市桃園區中路12街31號', phone: '0933-385255', lat: 24.9816, lng: 121.329},
-            {id: 'CV018', name: '中正里里長', category: 'chief', address: '桃園市桃園區中正路498號', phone: '333-8776', lat: 24.9816, lng: 121.337},
-            {id: 'CV019', name: '龍安里里長', category: 'chief', address: '桃園市桃園區龍安街146號', phone: '335-1186', lat: 24.9816, lng: 121.345},
-            {id: 'CV020', name: '龍鳳里里長', category: 'chief', address: '桃園市桃園區龍鳳六街178號', phone: '360-1356', lat: 24.9816, lng: 121.353},
-            {id: 'CV021', name: '長美里里長', category: 'chief', address: '桃園市桃園區中山路138號', phone: '0981-899705', lat: 24.9896, lng: 121.281},
-            {id: 'CV022', name: '南門里里長', category: 'chief', address: '桃園市桃園區南山街122號', phone: '218-8382', lat: 24.9896, lng: 121.289},
-            {id: 'CV023', name: '南華里里長', category: 'chief', address: '桃園市桃園區文化街32號', phone: '337-2609', lat: 24.9896, lng: 121.297},
-            {id: 'CV024', name: '中山里里長', category: 'chief', address: '桃園市桃園區中平路102號9樓之2', phone: '0919-802050', lat: 24.9896, lng: 121.305},
-            {id: 'CV025', name: '中平里里長', category: 'chief', address: '桃園市桃園區壽昌街20巷25號', phone: '220-0639', lat: 24.9896, lng: 121.313},
-            {id: 'CV026', name: '中正里里長', category: 'chief', address: '桃園市桃園區縣府路256巷5弄6號', phone: '0918-337608', lat: 24.9896, lng: 121.321},
-            {id: 'CV027', name: '中成里里長', category: 'chief', address: '桃園市桃園區吉安街101巷8弄7號', phone: '301-9026', lat: 24.9896, lng: 121.329},
-            {id: 'CV028', name: '中信里里長', category: 'chief', address: '桃園市桃園區逸林街102號', phone: '0953-513617', lat: 24.9896, lng: 121.337},
-            {id: 'CV029', name: '中原里里長', category: 'chief', address: '桃園市桃園區宏昌七街74號', phone: '228-8666', lat: 24.9896, lng: 121.345},
-            {id: 'CV030', name: '中泰里里長', category: 'chief', address: '桃園市桃園區國聖一街192號', phone: '0922-540288', lat: 24.9896, lng: 121.353},
-            {id: 'CV031', name: '中聖里里長', category: 'chief', address: '桃園市桃園區宏昌六街316號', phone: '0953-871805', lat: 24.9976, lng: 121.281},
-            {id: 'CV032', name: '中路里里長', category: 'chief', address: '桃園市桃園區延壽街33號', phone: '360-1321', lat: 24.9976, lng: 121.289},
-            {id: 'CV033', name: '中德里里長', category: 'chief', address: '桃園市桃園區國際路一段494巷2之1號', phone: '376-5858', lat: 24.9976, lng: 121.297},
-            {id: 'CV034', name: '文中里里長', category: 'chief', address: '桃園市桃園區益壽二街20號', phone: '0912-242248', lat: 24.9976, lng: 121.305},
-            {id: 'CV035', name: '玉山里里長', category: 'chief', address: '桃園市桃園區玉山街233巷36弄3號', phone: '0939-914922', lat: 24.9976, lng: 121.313},
-            {id: 'CV036', name: '泰山里里長', category: 'chief', address: '桃園市桃園區玉山街58號', phone: '335-5862', lat: 24.9976, lng: 121.321},
-            {id: 'CV037', name: '龍山里里長', category: 'chief', address: '桃園市桃園區龍壽街145巷31號', phone: '369-1871', lat: 24.9976, lng: 121.329},
-            {id: 'CV038', name: '龍安里里長', category: 'chief', address: '桃園市桃園區國強一街462號', phone: '369-1798', lat: 24.9976, lng: 121.337},
-            {id: 'CV039', name: '龍岡里里長', category: 'chief', address: '桃園市桃園區江南九街58號', phone: '344-1985', lat: 24.9976, lng: 121.345},
-            {id: 'CV040', name: '龍祥里里長', category: 'chief', address: '桃園市桃園區中山路1308巷289號', phone: '370-1866', lat: 24.9976, lng: 121.353},
-            {id: 'CV041', name: '龍壽里里長', category: 'chief', address: '桃園市桃園區龍城二街52巷2號', phone: '0909-608023', lat: 25.0056, lng: 121.281},
-            {id: 'CV042', name: '龍鳳里里長', category: 'chief', address: '桃園市桃園區國豐二街31號', phone: '217-3012', lat: 25.0056, lng: 121.289},
-            {id: 'CV043', name: '中埔里里長', category: 'chief', address: '桃園市桃園區富國路216巷79號', phone: '341-4592', lat: 25.0056, lng: 121.297},
-            {id: 'CV044', name: '中寧里里長', category: 'chief', address: '桃園市桃園區大興西路二段69巷5號', phone: '325-6311', lat: 25.0056, lng: 121.305},
-            {id: 'CV045', name: '北埔里里長', category: 'chief', address: '桃園市桃園區莊敬路二段160號', phone: '301-5889', lat: 25.0056, lng: 121.313},
-            {id: 'CV046', name: '永安里里長', category: 'chief', address: '桃園市桃園區福壽街29號', phone: '337-5713', lat: 25.0056, lng: 121.321},
-            {id: 'CV047', name: '同安里里長', category: 'chief', address: '桃園市桃園區慈文路200巷8號', phone: '325-6272', lat: 25.0056, lng: 121.329},
-            {id: 'CV048', name: '同德里里長', category: 'chief', address: '桃園市桃園區中埔五街4巷9號', phone: '325-1492', lat: 25.0056, lng: 121.337},
-            {id: 'CV049', name: '自強里里長', category: 'chief', address: '桃園市桃園區天祥七街89號', phone: '358-0607', lat: 25.0056, lng: 121.345},
-            {id: 'CV050', name: '西埔里里長', category: 'chief', address: '桃園市桃園區富國路822巷199弄24號', phone: '301-9173', lat: 25.0056, lng: 121.353},
-            {id: 'CV051', name: '明德里里長', category: 'chief', address: '桃園市桃園區中埔六街194巷22號', phone: '325-8968', lat: 25.0136, lng: 121.281},
-            {id: 'CV052', name: '東埔里里長', category: 'chief', address: '桃園市桃園區信光路55號', phone: '335-1772', lat: 25.0136, lng: 121.289},
-            {id: 'CV053', name: '長安里里長', category: 'chief', address: '桃園市桃園區長春路174號', phone: '332-3799', lat: 25.0136, lng: 121.297},
-            {id: 'CV054', name: '長德里里長', category: 'chief', address: '桃園市桃園區愛七街15號', phone: '358-6115', lat: 25.0136, lng: 121.305},
-            {id: 'CV055', name: '信光里里長', category: 'chief', address: '桃園市桃園區慈文路65號', phone: '0939-063287', lat: 25.0136, lng: 121.313},
-            {id: 'CV056', name: '南埔里里長', category: 'chief', address: '桃園市桃園區永安路650巷3號', phone: '326-6140', lat: 25.0136, lng: 121.321},
-            {id: 'CV057', name: '莊敬里里長', category: 'chief', address: '桃園市桃園區新埔七街171巷1號', phone: '325-6316', lat: 25.0136, lng: 121.329},
-            {id: 'CV058', name: '慈文里里長', category: 'chief', address: '桃園市桃園區永安路495號', phone: '302-4671', lat: 25.0136, lng: 121.337},
-            {id: 'CV059', name: '新埔里里長', category: 'chief', address: '桃園市桃園區新埔七街9號', phone: '316-1107', lat: 25.0136, lng: 121.345},
-            {id: 'CV060', name: '瑞慶里里長', category: 'chief', address: '桃園市桃園區明德街32號', phone: '302-1077', lat: 25.0136, lng: 121.353},
-            {id: 'CV061', name: '寶安里里長', category: 'chief', address: '桃園市桃園區永安北路399號', phone: '302-7498', lat: 25.0216, lng: 121.281},
-            {id: 'CV062', name: '寶慶里里長', category: 'chief', address: '桃園市桃園區同德七街116號', phone: '301-7879', lat: 25.0216, lng: 121.289},
-            {id: 'CV063', name: '經國里里長', category: 'chief', address: '桃園市桃園區同安街336巷2號', phone: '0933-944277', lat: 25.0216, lng: 121.297},
-            {id: 'CV064', name: '三元里里長', category: 'chief', address: '桃園市桃園區三元街253巷22之7號', phone: '338-8263', lat: 25.0216, lng: 121.305},
-            {id: 'CV065', name: '三民里里長', category: 'chief', address: '桃園市桃園區中山東路128號', phone: '333-0301', lat: 25.0216, lng: 121.313},
-            {id: 'CV066', name: '大有里里長', category: 'chief', address: '桃園市桃園區民有十街218號2樓', phone: '0930-929800', lat: 25.0216, lng: 121.321},
-            {id: 'CV067', name: '大業里里長', category: 'chief', address: '桃園市桃園區民有十一街102號', phone: '326-7179', lat: 25.0216, lng: 121.329},
-            {id: 'CV068', name: '大興里里長', category: 'chief', address: '桃園市桃園區福山街15號', phone: '0989-234-867', lat: 25.0216, lng: 121.337},
-            {id: 'CV069', name: '成功里里長', category: 'chief', address: '桃園市桃園區春日路232之192號', phone: '336-3094', lat: 25.0216, lng: 121.345},
-            {id: 'CV070', name: '汴洲里里長', category: 'chief', address: '桃園市桃園區?庫街19號', phone: '325-4919', lat: 25.0216, lng: 121.353},
-            {id: 'CV071', name: '忠義里里長', category: 'chief', address: '桃園市桃園區三元街75號', phone: '339-2159', lat: 25.0296, lng: 121.281},
-            {id: 'CV072', name: '東山里里長', category: 'chief', address: '桃園市桃園區安樂街75號', phone: '332-5161', lat: 25.0296, lng: 121.289},
-            {id: 'CV073', name: '東門里里長', category: 'chief', address: '桃園市桃園區東國街49號', phone: '337-4497', lat: 25.0296, lng: 121.297},
-            {id: 'CV074', name: '青溪里里長', category: 'chief', address: '桃園市桃園區鎮撫街41號2樓', phone: '0906-016094', lat: 25.0296, lng: 121.305},
-            {id: 'CV075', name: '春日里里長', category: 'chief', address: '桃園市桃園區至善街133號', phone: '317-9669', lat: 25.0296, lng: 121.313},
-            {id: 'CV076', name: '朝陽里里長', category: 'chief', address: '桃園市桃園區朝陽街120號', phone: '337-8009', lat: 25.0296, lng: 121.321},
-            {id: 'CV077', name: '會稽里里長', category: 'chief', address: '桃園市桃園區興二街6號', phone: '325-2826', lat: 25.0296, lng: 121.329},
-            {id: 'CV078', name: '萬壽里里長', category: 'chief', address: '桃園市桃園區萬壽路三段99巷10弄6號', phone: '332-9813', lat: 25.0296, lng: 121.337},
-            {id: 'CV079', name: '福元里里長', category: 'chief', address: '桃園市桃園區民有三街26號', phone: '335-6080', lat: 25.0296, lng: 121.345},
-            {id: 'CV080', name: '寶山里里長', category: 'chief', address: '桃園市桃園區雙?路208號', phone: '358-2400', lat: 25.0296, lng: 121.353},
-            {id: 'CV081', name: '檜樂里里長', category: 'chief', address: '桃園市桃園區大德三街72巷25號', phone: '326-0532', lat: 25.0376, lng: 121.281},
-            {id: 'CV082', name: '寶民里里長', category: 'chief', address: '桃園市桃園區民有五街260號', phone: '0912-515976', lat: 25.0376, lng: 121.289},
+            // 里長
+            {id: 'CV001', name: '大林里里長', category: 'chief', address: '桃園市桃園區樹仁三街68號', phone: '363-9988', lat: 24.9946, lng: 121.2990},
+            {id: 'CV002', name: '大樹里里長', category: 'chief', address: '桃園市桃園區樹仁二街176號', phone: '0919-354002', lat: 24.9926, lng: 121.3010},
+            {id: 'CV003', name: '大豐里里長', category: 'chief', address: '桃園市桃園區樹林四街38巷12號', phone: '366-5511', lat: 24.9966, lng: 121.3030},
+            {id: 'CV004', name: '建國里里長', category: 'chief', address: '桃園市桃園區林森路68巷1弄6號', phone: '361-0068', lat: 24.9906, lng: 121.3050},
+            {id: 'CV005', name: '雲林里里長', category: 'chief', address: '桃園市桃園區延平路103號', phone: '363-2233', lat: 24.9886, lng: 121.2970},
 
-            // 宮廟（4筆）
-            {id: 'TP001', name: '護國宮', category: 'temple', address: '桃園區國際路1段401巷123號', phone: '367-7405', lat: 25.0256, lng: 121.333},
-            {id: 'TP002', name: '桃園賜安府', category: 'temple', address: '桃園市桃園區國強一街254號', phone: '369-0926', lat: 25.0256, lng: 121.341},
-            {id: 'TP003', name: '桃園慈護宮', category: 'temple', address: '桃園市桃園區復興路275號', phone: '332-1498', lat: 25.0336, lng: 121.333},
-            {id: 'TP004', name: '景福宮', category: 'temple', address: '桃園市桃園區中正路208號', phone: '333-7552', lat: 25.0336, lng: 121.341},
+            // 宮廟
+            {id: 'TP001', name: '護國宮', category: 'temple', address: '桃園區國際路1段401巷123號', phone: '367-7405', lat: 24.9936, lng: 121.3000},
+            {id: 'TP002', name: '桃園賜安府', category: 'temple', address: '桃園市桃園區國強一街254號', phone: '369-0926', lat: 24.9916, lng: 121.3020},
+            {id: 'TP003', name: '桃園慈護宮', category: 'temple', address: '桃園市桃園區復興路275號', phone: '332-1498', lat: 24.9956, lng: 121.2995},
+            {id: 'TP004', name: '景福宮', category: 'temple', address: '桃園市桃園區中正路208號', phone: '333-7552', lat: 24.9906, lng: 121.3040},
 
-            // 律師事務所（5筆）
-            {id: 'LW001', name: '財團法人法律扶助基金會(桃園分會)', category: 'lawyer', address: '桃園市桃園區復興路110號12樓', phone: '334-6500', lat: 25.0416, lng: 121.349},
-            {id: 'LW002', name: '捷泰法律事務所', category: 'lawyer', address: '桃園市桃園區文中路493號5樓', phone: '369-5206', lat: 25.0416, lng: 121.357},
-            {id: 'LW003', name: '元麒法律事務所', category: 'lawyer', address: '桃園市桃園區守法路42號1樓', phone: '334-3276', lat: 25.0416, lng: 121.365},
-            {id: 'LW004', name: '達觀法律事務所', category: 'lawyer', address: '桃園市桃園區縣府路312號之3樓', phone: '338-8898', lat: 25.0496, lng: 121.349},
-            {id: 'LW005', name: '上善法律律師事務所', category: 'lawyer', address: '桃園市桃園區縣府路212號2F-2', phone: '347-8776', lat: 25.0496, lng: 121.357}
+            // 律師事務所
+            {id: 'LW001', name: '財團法人法律扶助基金會(桃園分會)', category: 'lawyer', address: '桃園市桃園區復興路110號12樓', phone: '334-6500', lat: 24.9956, lng: 121.2990},
+            {id: 'LW002', name: '捷泰法律事務所', category: 'lawyer', address: '桃園市桃園區文中路493號5樓', phone: '369-5206', lat: 24.9926, lng: 121.3010},
+            {id: 'LW003', name: '元麒法律事務所', category: 'lawyer', address: '桃園市桃園區守法路42號1樓', phone: '334-3276', lat: 24.9946, lng: 121.3030},
+            {id: 'LW004', name: '達觀法律事務所', category: 'lawyer', address: '桃園市桃園區縣府路312號之3樓', phone: '338-8898', lat: 24.9966, lng: 121.3050},
+            {id: 'LW005', name: '上善法律律師事務所', category: 'lawyer', address: '桃園市桃園區縣府路212號2F-2', phone: '347-8776', lat: 24.9906, lng: 121.2980},
+            {id: 'LW006', name: '尚理律師事務所', category: 'lawyer', address: '桃園市桃園區中山北路2號', phone: '331-7600', lat: 24.9886, lng: 121.3040},
+            {id: 'LW007', name: '陳袓德律師事務所', category: 'lawyer', address: '桃園市桃園區三民路3段168號', phone: '335-9211', lat: 24.9976, lng: 121.3060}
         ];
         
-        // 初始化應用程序
+        // 等待 Leaflet 載入後初始化
         function initApp() {
-            console.log('開始初始化應用程序 - 完整版本 (133筆資源)');
+            debugLog("初始化應用程序");
             
-            // 初始化資源數據
+            if (typeof L === 'undefined') {
+                debugLog("Leaflet 尚未載入，重試中...");
+                setTimeout(initApp, 100);
+                return;
+            }
+            
+            // 創建地圖，中心點設在桃園市
+            map = L.map('map').setView([24.9936, 121.3010], 13);
+            
+            // 添加 OpenStreetMap 圖層
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© <a href="https://www.openstreetMap.org/copyright">OpenStreetMap</a> contributors',
+                maxZoom: 19
+            }).addTo(map);
+            
+            // 創建標記圖層群組
+            markersLayer = L.layerGroup().addTo(map);
+            
             resources = resourcesData;
             
-            // 載入資源列表
+            // 創建標記
+            createMarkers();
+            
+            // 更新資源列表
             updateResourceList(resources);
             
             // 綁定事件監聽器
             bindEventListeners();
             
-            // 檢查Leaflet是否已載入
-            checkLeafletAndInitMap();
-            
-            console.log(`成功載入 ${resources.length} 筆福利資源`);
+            debugLog(`成功載入 ${resources.length} 個資源`);
         }
         
-        // 檢查Leaflet並初始化地圖
-        function checkLeafletAndInitMap() {
-            let attempts = 0;
-            const maxAttempts = 20;
-            
-            function tryInitMap() {
-                attempts++;
-                
-                if (typeof L !== 'undefined' && L.map) {
-                    console.log('Leaflet 已載入，初始化地圖');
-                    setTimeout(initializeMap, 100);
-                } else if (attempts < maxAttempts) {
-                    console.log(`等待 Leaflet 載入... (${attempts}/${maxAttempts})`);
-                    setTimeout(tryInitMap, 200);
-                } else {
-                    console.log('Leaflet 載入失敗，切換到純列表模式');
-                    showListOnlyMode();
-                }
-            }
-            
-            tryInitMap();
-        }
-        
-        function initializeMap() {
-            try {
-                console.log('開始初始化地圖...');
-                
-                if (typeof L === 'undefined') {
-                    throw new Error('Leaflet 庫未載入');
-                }
-                
-                const mapElement = document.getElementById('map');
-                if (!mapElement) {
-                    throw new Error('找不到地圖容器元素');
-                }
-                
-                console.log('創建地圖實例...');
-                
-                // 創建地圖
-                map = L.map('map', {
-                    center: [24.9936, 121.3010],
-                    zoom: 13,
-                    zoomControl: true,
-                    attributionControl: true,
-                    preferCanvas: false
-                });
-                
-                console.log('添加地圖圖層...');
-                
-                // 添加圖層
-                const tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-                    maxZoom: 19,
-                    minZoom: 10,
-                    crossOrigin: true
-                });
-                
-                tileLayer.addTo(map);
-                
-                // 監聽圖層載入事件
-                tileLayer.on('loading', function() {
-                    console.log('地圖圖層開始載入...');
-                });
-                
-                tileLayer.on('load', function() {
-                    console.log('地圖圖層載入完成');
-                });
-                
-                tileLayer.on('tileerror', function(e) {
-                    console.log('地圖圖磚載入錯誤:', e);
-                });
-                
-                // 創建標記圖層
-                markersLayer = L.layerGroup().addTo(map);
-                
-                // 等待地圖完全載入後再添加標記
-                map.whenReady(function() {
-                    console.log('地圖已準備就緒，開始創建標記');
-                    createMarkers();
-                    
-                    // 強制地圖重新渲染
-                    setTimeout(function() {
-                        map.invalidateSize();
-                        console.log(`地圖初始化完成 - 顯示 ${markers.length} 個資源標記`);
-                    }, 200);
-                });
-                
-                // 添加地圖點擊事件用於調試
-                map.on('click', function(e) {
-                    console.log('地圖點擊:', e.latlng);
-                });
-                
-            } catch (error) {
-                console.error('地圖初始化失敗:', error);
-                showListOnlyMode();
-            }
-        }
-        
+        // 創建標記
         function createMarkers() {
-            if (!map || !markersLayer) {
-                console.log('地圖或標記圖層未準備就緒');
-                return;
-            }
-            
-            let markerCount = 0;
-            
-            resources.forEach((resource, index) => {
-                try {
-                    // 確保座標有效
-                    if (!resource.lat || !resource.lng || 
-                        isNaN(resource.lat) || isNaN(resource.lng)) {
-                        console.log(`資源 ${resource.id} 座標無效`);
-                        return;
-                    }
-                    
-                    // 創建簡單的圓形標記
-                    const icon = L.divIcon({
-                        className: 'custom-marker',
-                        html: `<div style="
-                            background-color: ${categoryColors[resource.category] || '#666666'};
-                            width: 16px;
-                            height: 16px;
-                            border-radius: 50%;
-                            border: 2px solid white;
-                            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
-                        "></div>`,
-                        iconSize: [20, 20],
-                        iconAnchor: [10, 10]
-                    });
-                    
-                    const marker = L.marker([resource.lat, resource.lng], { 
-                        icon: icon,
-                        title: resource.name
-                    });
-                    
-                    const popupContent = `
-                        <div style="min-width: 200px;">
-                            <h4 style="margin: 0 0 8px 0; color: #333;">${resource.name}</h4>
-                            <p style="margin: 4px 0;"><strong>類型:</strong> ${categoryNames[resource.category] || resource.category}</p>
-                            <p style="margin: 4px 0;"><strong>地址:</strong> ${resource.address}</p>
-                            <p style="margin: 4px 0;"><strong>電話:</strong> ${resource.phone}</p>
+            resources.forEach(resource => {
+                // 創建自定義圖標
+                const icon = L.divIcon({
+                    className: 'custom-marker',
+                    html: `<div style="
+                        background-color: ${categoryColors[resource.category]};
+                        width: 20px;
+                        height: 20px;
+                        border-radius: 50%;
+                        border: 2px solid white;
+                        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+                    "></div>`,
+                    iconSize: [20, 20],
+                    iconAnchor: [10, 10]
+                });
+                
+                // 創建標記
+                const marker = L.marker([resource.lat, resource.lng], { icon: icon });
+                
+                // 創建彈出窗口內容
+                const popupContent = `
+                    <div class="popup-content">
+                        <h3>${resource.name}</h3>
+                        <p><strong>類型:</strong> ${categoryNames[resource.category]}</p>
+                        <p><strong>地址:</strong> ${resource.address}</p>
+                        <p><strong>電話:</strong> ${resource.phone}</p>
+                        <div>
+                            <button class="route-btn" onclick="showRoute('${resource.address}')">
+                                Google Maps 導航
+                            </button>
                         </div>
-                    `;
-                    
-                    marker.bindPopup(popupContent, {
-                        maxWidth: 300,
-                        className: 'custom-popup'
-                    });
-                    
-                    // 標記點擊事件
-                    marker.on('click', function() {
-                        updateActiveResourceItem(resource.id);
-                    });
-                    
-                    markersLayer.addLayer(marker);
-                    
-                    markers.push({
-                        marker: marker,
-                        resource: resource
-                    });
-                    
-                    markerCount++;
-                    
-                } catch (error) {
-                    console.log(`創建標記失敗 (${resource.id}):`, error);
-                }
+                    </div>
+                `;
+                
+                marker.bindPopup(popupContent, {
+                    className: 'custom-popup'
+                });
+                
+                // 標記點擊事件
+                marker.on('click', function() {
+                    updateActiveResourceItem(resource.id);
+                });
+                
+                // 添加到標記圖層
+                markersLayer.addLayer(marker);
+                
+                // 存儲標記信息
+                markers.push({
+                    marker: marker,
+                    resource: resource
+                });
             });
-            
-            console.log(`成功創建 ${markerCount} 個標記`);
-            
-            // 調整地圖視圖以包含所有標記
-            if (markerCount > 0) {
-                try {
-                    const group = new L.featureGroup(markers.map(m => m.marker));
-                    map.fitBounds(group.getBounds().pad(0.1));
-                } catch (error) {
-                    console.log('調整地圖視圖失敗:', error);
-                }
-            }
         }
         
-        function showListOnlyMode() {
-            const mapElement = document.getElementById('map');
-            const sidebar = document.querySelector('.sidebar');
-            
-            if (mapElement) {
-                mapElement.style.display = 'none';
-            }
-            if (sidebar) {
-                sidebar.style.width = '100%';
-            }
-            
-            const notice = document.createElement('div');
-            notice.className = 'notice';
-            notice.innerHTML = '<strong>注意：</strong> 地圖功能暫時無法使用，但您仍可以瀏覽所有資源列表。';
-            
-            const resourceList = document.getElementById('resource-list');
-            resourceList.parentNode.insertBefore(notice, resourceList);
+        // 顯示路線
+        function showRoute(address) {
+            const googleMapsUrl = `https://www.google.com/maps/search/${encodeURIComponent(address)}`;
+            window.open(googleMapsUrl, '_blank');
         }
         
+        // 更新資源列表
         function updateResourceList(filteredResources) {
             const resourceList = document.getElementById('resource-list');
             resourceList.innerHTML = '';
@@ -626,28 +407,26 @@
                 const resourceItem = document.createElement('div');
                 resourceItem.className = 'resource-item';
                 resourceItem.id = `resource-${resource.id}`;
-                
                 resourceItem.innerHTML = `
                     <strong>${resource.name}</strong><br>
                     <small>${categoryNames[resource.category]} | ${resource.address}</small>
-                    <div class="resource-item-details">📞 ${resource.phone}</div>
                 `;
                 
+                // 點擊列表項目跳轉到對應的標記
                 resourceItem.addEventListener('click', function() {
-                    if (map && markers.length > 0) {
-                        const markerInfo = markers.find(m => m.resource.id === resource.id);
-                        if (markerInfo) {
-                            map.setView([resource.lat, resource.lng], 16);
-                            markerInfo.marker.openPopup();
-                        }
+                    const markerInfo = markers.find(m => m.resource.id === resource.id);
+                    if (markerInfo) {
+                        map.setView([resource.lat, resource.lng], 16);
+                        markerInfo.marker.openPopup();
+                        updateActiveResourceItem(resource.id);
                     }
-                    updateActiveResourceItem(resource.id);
                 });
                 
                 resourceList.appendChild(resourceItem);
             });
         }
         
+        // 更新活動資源項目
         function updateActiveResourceItem(resourceId) {
             document.querySelectorAll('.resource-item').forEach(item => {
                 item.classList.remove('active');
@@ -659,36 +438,47 @@
             }
         }
         
+        // 過濾資源
         function filterResources() {
             const searchText = document.getElementById('search-input').value.toLowerCase();
             const activeCategory = document.querySelector('.category-btn.active').dataset.category;
             
+            // 過濾資源
             const filteredResources = resources.filter(resource => {
+                // 類別過濾
                 const categoryMatch = activeCategory === 'all' || resource.category === activeCategory;
+                
+                // 搜尋文字過濾
                 const textMatch = searchText === '' ||
                     resource.name.toLowerCase().includes(searchText) ||
                     resource.address.toLowerCase().includes(searchText) ||
-                    resource.phone.toLowerCase().includes(searchText);
+                    resource.phone.toLowerCase().includes(searchText) ||
+                    (categoryNames[resource.category] && categoryNames[resource.category].toLowerCase().includes(searchText));
                 
                 return categoryMatch && textMatch;
             });
             
-            if (markersLayer && markers.length > 0) {
-                markersLayer.clearLayers();
-                markers.forEach(markerInfo => {
-                    const visible = filteredResources.some(r => r.id === markerInfo.resource.id);
-                    if (visible) {
-                        markersLayer.addLayer(markerInfo.marker);
-                    }
-                });
-            }
+            // 清除現有標記
+            markersLayer.clearLayers();
             
+            // 重新添加過濾後的標記
+            markers.forEach(markerInfo => {
+                const visible = filteredResources.some(r => r.id === markerInfo.resource.id);
+                if (visible) {
+                    markersLayer.addLayer(markerInfo.marker);
+                }
+            });
+            
+            // 更新資源列表
             updateResourceList(filteredResources);
         }
         
+        // 綁定事件監聽器
         function bindEventListeners() {
+            // 搜尋輸入框
             document.getElementById('search-input').addEventListener('input', filterResources);
             
+            // 類別過濾按鈕
             document.querySelectorAll('.category-btn').forEach(btn => {
                 btn.addEventListener('click', function() {
                     document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('active'));
@@ -698,30 +488,13 @@
             });
         }
         
+        // 全域函數
+        window.showRoute = showRoute;
+        
         // 頁面載入完成後初始化
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', initApp);
-        } else {
+        document.addEventListener('DOMContentLoaded', function() {
+            debugLog('DOM 載入完成，初始化應用程序');
             initApp();
-        }
-        
-        // 視窗大小改變時重新調整地圖
-        window.addEventListener('resize', function() {
-            if (map) {
-                setTimeout(function() {
-                    map.invalidateSize();
-                }, 100);
-            }
-        });
-        
-        // 頁面完全載入後再次調整地圖大小
-        window.addEventListener('load', function() {
-            if (map) {
-                setTimeout(function() {
-                    map.invalidateSize();
-                    console.log('頁面載入完成，重新調整地圖大小');
-                }, 200);
-            }
         });
     </script>
 </body>
