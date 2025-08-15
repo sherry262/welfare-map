@@ -45,7 +45,9 @@
         #map {
             flex: 1;
             height: 100%;
-            min-height: 400px;
+            min-height: 500px;
+            width: 100%;
+            z-index: 1;
         }
         
         .filter-section {
@@ -139,6 +141,31 @@
             font-size: 14px;
         }
         
+        .custom-marker {
+            background: transparent !important;
+            border: none !important;
+        }
+        
+        .custom-popup .leaflet-popup-content-wrapper {
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        
+        .custom-popup .leaflet-popup-content {
+            margin: 12px 16px;
+            line-height: 1.4;
+        }
+        
+        /* 確保地圖容器正確顯示 */
+        .leaflet-container {
+            background: #f8f9fa;
+        }
+        
+        /* 修正地圖載入問題 */
+        .leaflet-tile {
+            filter: none;
+        }
+        
         @media (max-width: 768px) {
             .container {
                 flex-direction: column;
@@ -146,6 +173,9 @@
             .sidebar {
                 width: auto;
                 max-height: 200px;
+            }
+            #map {
+                min-height: 400px;
             }
         }
     </style>
@@ -227,7 +257,7 @@
             {id: 'CH004', name: '財團法人臺灣省桃園縣中國基督教靈糧世界佈道會桃園靈糧堂', category: 'church', address: '桃園市桃園區中正路1067號5樓', phone: '356-9317', lat: 24.9736, lng: 121.311},
             {id: 'CH005', name: '財團法人新約教會桃園教會', category: 'church', address: '桃園市桃園區大業路二段58號7樓', phone: '325-2603', lat: 24.9836, lng: 121.281},
             {id: 'CH006', name: '財團法人桃園基督的教會', category: 'church', address: '桃園市桃園區三民路三段286號5樓', phone: '281-0735', lat: 24.9836, lng: 121.291},
-            {id: 'CH007', name: '財團法人臺灣省桃園市福音信義會', category: 'church', address: '桃園市桃園區大豐路222號', phone: '364-5900', lat: 24.9836, lng: 121.301},
+            {id: 'CH007', name: '財團法人臺灣省桃園縣福音信義會', category: 'church', address: '桃園市桃園區大豐路222號', phone: '364-5900', lat: 24.9836, lng: 121.301},
             {id: 'CH008', name: '財團法人臺灣基督長老教會桃園教會', category: 'church', address: '桃園市桃園區民生路208號6樓', phone: '332-4063', lat: 24.9836, lng: 121.311},
             {id: 'CH009', name: '財團法人沙爾德聖保祿修女會', category: 'church', address: '桃園市桃園區建新街123號', phone: '361-3141', lat: 24.9936, lng: 121.281},
             {id: 'CH010', name: '財團法人臺灣省桃園縣中華福音道路德會仁愛堂區會', category: 'church', address: '桃園市桃園區縣府路110號13樓', phone: '362-5539', lat: 24.9936, lng: 121.291},
@@ -235,15 +265,15 @@
             {id: 'CH012', name: '財團法人臺灣省桃園縣桃園市中華基督教浸信會溢恩堂', category: 'church', address: '桃園市桃園市桃園區東國街55號', phone: '335-3106', lat: 24.9936, lng: 121.311},
 
             // 基金會（15筆）
-            {id: 'FD001', name: '財團法人桃園市怡仁愛心基金會', category: 'foundation', address: '桃園市桃園區三民路3段106號15樓', phone: '336-9066', lat: 24.9736, lng: 121.281},
-            {id: 'FD002', name: '財團法人桃園市私立護國宮愛心基金會', category: 'foundation', address: '桃園市桃園區國際路1段401巷123號', phone: '362-1111', lat: 24.9736, lng: 121.291},
-            {id: 'FD003', name: '財團法人桃園市私立簡欣哲社會福利基金會', category: 'foundation', address: '桃園市桃園區復興路180號6樓', phone: '336-6512', lat: 24.9736, lng: 121.301},
-            {id: 'FD004', name: '財團法人桃園市私立景福宮慈善基金會', category: 'foundation', address: '桃園市桃園區中正路208號', phone: '332-4672', lat: 24.9736, lng: 121.311},
-            {id: 'FD005', name: '財團法人桃園市私立天立社會福利基金會', category: 'foundation', address: '桃園市桃園區樹仁三街601號', phone: '367-7666', lat: 24.9836, lng: 121.281},
-            {id: 'FD006', name: '財團法人桃園市私立元極康福慈善事業基金會', category: 'foundation', address: '桃園市桃園區莊敬路一段128號2樓', phone: '326-2677', lat: 24.9836, lng: 121.291},
-            {id: 'FD007', name: '財團法人桃園市忠義社會福利慈善事業基金會', category: 'foundation', address: '桃園市桃園區大有路80號', phone: '333-7748', lat: 24.9836, lng: 121.301},
-            {id: 'FD008', name: '財團法人桃園市淳皓宏善基金會', category: 'foundation', address: '桃園市桃園區三元街407巷50號', phone: '332-8253', lat: 24.9836, lng: 121.311},
-            {id: 'FD009', name: '財團法人桃園市福島健康慈善基金會', category: 'foundation', address: '桃園市桃園區泰成路62巷39號2樓', phone: '0932-362847', lat: 24.9936, lng: 121.281},
+            {id: 'FD001', name: '財團法人桃園縣怡仁愛心基金會', category: 'foundation', address: '桃園市桃園區三民路3段106號15樓', phone: '336-9066', lat: 24.9736, lng: 121.281},
+            {id: 'FD002', name: '財團法人桃園縣私立護國宮愛心基金會', category: 'foundation', address: '桃園市桃園區國際路1段401巷123號', phone: '362-1111', lat: 24.9736, lng: 121.291},
+            {id: 'FD003', name: '財團法人桃園縣私立簡欣哲社會福利基金會', category: 'foundation', address: '桃園市桃園區復興路180號6樓', phone: '336-6512', lat: 24.9736, lng: 121.301},
+            {id: 'FD004', name: '財團法人桃園縣私立景福宮慈善基金會', category: 'foundation', address: '桃園市桃園區中正路208號', phone: '332-4672', lat: 24.9736, lng: 121.311},
+            {id: 'FD005', name: '財團法人桃園縣私立天立社會福利基金會', category: 'foundation', address: '桃園市桃園區樹仁三街601號', phone: '367-7666', lat: 24.9836, lng: 121.281},
+            {id: 'FD006', name: '財團法人桃園縣私立元極康福慈善事業基金會', category: 'foundation', address: '桃園市桃園區莊敬路一段128號2樓', phone: '326-2677', lat: 24.9836, lng: 121.291},
+            {id: 'FD007', name: '財團法人桃園縣忠義社會福利慈善事業基金會', category: 'foundation', address: '桃園市桃園區大有路80號', phone: '333-7748', lat: 24.9836, lng: 121.301},
+            {id: 'FD008', name: '財團法人桃園縣淳?宏善基金會', category: 'foundation', address: '桃園市桃園區三元街407巷50號', phone: '332-8253', lat: 24.9836, lng: 121.311},
+            {id: 'FD009', name: '財團法人桃園縣福島健康慈善基金會', category: 'foundation', address: '桃園市桃園區泰成路62巷39號2樓', phone: '0932-362847', lat: 24.9936, lng: 121.281},
             {id: 'FD010', name: '財團法人桃園市優勝地社會福利基金會', category: 'foundation', address: '桃園市桃園區中平路98號3樓之3', phone: '2541-8098', lat: 24.9936, lng: 121.291},
             {id: 'FD011', name: '財團法人腦性麻痺基金會', category: 'foundation', address: '桃園市桃園區中正路915號6樓之4', phone: '0916-577558', lat: 24.9936, lng: 121.301},
             {id: 'FD012', name: '財團法人桃園市安順社會福利慈善事業基金會 ', category: 'foundation', address: '桃園市桃園區民有東路1巷3號5樓', phone: '2733-7593', lat: 24.9936, lng: 121.311},
@@ -379,8 +409,10 @@
             // 綁定事件監聽器
             bindEventListeners();
             
-            // 嘗試初始化地圖
-            initializeMap();
+            // 延遲初始化地圖，確保DOM完全準備就緒
+            setTimeout(function() {
+                initializeMap();
+            }, 300);
             
             console.log(`成功載入 ${resources.length} 筆福利資源`);
         }
@@ -392,21 +424,35 @@
                 }
                 
                 // 創建地圖
-                map = L.map('map').setView([24.9936, 121.3010], 13);
+                map = L.map('map', {
+                    center: [24.9936, 121.3010],
+                    zoom: 13,
+                    zoomControl: true,
+                    attributionControl: true
+                });
                 
                 // 添加圖層
                 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                    attribution: '© OpenStreetMap contributors',
-                    maxZoom: 19
+                    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+                    maxZoom: 19,
+                    minZoom: 10,
+                    crossOrigin: true
                 }).addTo(map);
                 
                 // 創建標記圖層
                 markersLayer = L.layerGroup().addTo(map);
                 
-                // 創建標記
-                createMarkers();
-                
-                console.log(`地圖初始化成功 - 顯示 ${resources.length} 個資源標記`);
+                // 等待地圖完全載入後再添加標記
+                map.whenReady(function() {
+                    console.log('地圖已準備就緒，開始創建標記');
+                    createMarkers();
+                    
+                    // 強制地圖重新渲染
+                    setTimeout(function() {
+                        map.invalidateSize();
+                        console.log(`地圖初始化成功 - 顯示 ${markers.length} 個資源標記`);
+                    }, 100);
+                });
                 
             } catch (error) {
                 console.log('地圖初始化失敗:', error);
@@ -415,33 +461,86 @@
         }
         
         function createMarkers() {
-            resources.forEach(resource => {
-                const icon = L.divIcon({
-                    className: 'custom-marker',
-                    html: `<div style="background-color: ${categoryColors[resource.category]}; width: 16px; height: 16px; border-radius: 50%; border: 2px solid white;"></div>`,
-                    iconSize: [16, 16],
-                    iconAnchor: [8, 8]
-                });
-                
-                const marker = L.marker([resource.lat, resource.lng], { icon: icon });
-                
-                const popupContent = `
-                    <div>
-                        <h4>${resource.name}</h4>
-                        <p><strong>類型:</strong> ${categoryNames[resource.category]}</p>
-                        <p><strong>地址:</strong> ${resource.address}</p>
-                        <p><strong>電話:</strong> ${resource.phone}</p>
-                    </div>
-                `;
-                
-                marker.bindPopup(popupContent);
-                markersLayer.addLayer(marker);
-                
-                markers.push({
-                    marker: marker,
-                    resource: resource
-                });
+            if (!map || !markersLayer) {
+                console.log('地圖或標記圖層未準備就緒');
+                return;
+            }
+            
+            let markerCount = 0;
+            
+            resources.forEach((resource, index) => {
+                try {
+                    // 確保座標有效
+                    if (!resource.lat || !resource.lng || 
+                        isNaN(resource.lat) || isNaN(resource.lng)) {
+                        console.log(`資源 ${resource.id} 座標無效`);
+                        return;
+                    }
+                    
+                    // 創建簡單的圓形標記
+                    const icon = L.divIcon({
+                        className: 'custom-marker',
+                        html: `<div style="
+                            background-color: ${categoryColors[resource.category] || '#666666'};
+                            width: 16px;
+                            height: 16px;
+                            border-radius: 50%;
+                            border: 2px solid white;
+                            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+                        "></div>`,
+                        iconSize: [20, 20],
+                        iconAnchor: [10, 10]
+                    });
+                    
+                    const marker = L.marker([resource.lat, resource.lng], { 
+                        icon: icon,
+                        title: resource.name
+                    });
+                    
+                    const popupContent = `
+                        <div style="min-width: 200px;">
+                            <h4 style="margin: 0 0 8px 0; color: #333;">${resource.name}</h4>
+                            <p style="margin: 4px 0;"><strong>類型:</strong> ${categoryNames[resource.category] || resource.category}</p>
+                            <p style="margin: 4px 0;"><strong>地址:</strong> ${resource.address}</p>
+                            <p style="margin: 4px 0;"><strong>電話:</strong> ${resource.phone}</p>
+                        </div>
+                    `;
+                    
+                    marker.bindPopup(popupContent, {
+                        maxWidth: 300,
+                        className: 'custom-popup'
+                    });
+                    
+                    // 標記點擊事件
+                    marker.on('click', function() {
+                        updateActiveResourceItem(resource.id);
+                    });
+                    
+                    markersLayer.addLayer(marker);
+                    
+                    markers.push({
+                        marker: marker,
+                        resource: resource
+                    });
+                    
+                    markerCount++;
+                    
+                } catch (error) {
+                    console.log(`創建標記失敗 (${resource.id}):`, error);
+                }
             });
+            
+            console.log(`成功創建 ${markerCount} 個標記`);
+            
+            // 調整地圖視圖以包含所有標記
+            if (markerCount > 0) {
+                try {
+                    const group = new L.featureGroup(markers.map(m => m.marker));
+                    map.fitBounds(group.getBounds().pad(0.1));
+                } catch (error) {
+                    console.log('調整地圖視圖失敗:', error);
+                }
+            }
         }
         
         function showListOnlyMode() {
@@ -554,7 +653,25 @@
         } else {
             initApp();
         }
+        
+        // 視窗大小改變時重新調整地圖
+        window.addEventListener('resize', function() {
+            if (map) {
+                setTimeout(function() {
+                    map.invalidateSize();
+                }, 100);
+            }
+        });
+        
+        // 頁面完全載入後再次調整地圖大小
+        window.addEventListener('load', function() {
+            if (map) {
+                setTimeout(function() {
+                    map.invalidateSize();
+                    console.log('頁面載入完成，重新調整地圖大小');
+                }, 200);
+            }
+        });
     </script>
 </body>
 </html>
-
