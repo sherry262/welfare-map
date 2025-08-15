@@ -5,9 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>福利資源地圖</title>
     
-    <!-- Leaflet CSS -->
+    <!-- Leaflet CSS - 移除integrity檢查 -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" 
-          integrity="sha512-h9FcoyWjHcOcmEVkxOfTLnmZFWIH0iZhZT1H2TbOq55xssQGEJHEaIm+PgoUaZbRvQTNTluNOEfb1ZRy6D3BOw==" 
           crossorigin="anonymous" referrerpolicy="no-referrer" />
     
     <style>
@@ -216,9 +215,8 @@
         <div id="map"></div>
     </div>
 
-    <!-- Leaflet JavaScript -->
+    <!-- Leaflet JavaScript - 移除integrity檢查 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js" 
-            integrity="sha512-BwHfrr4c9kmRkLw6iXFdzcdWV/PGkVgiIyIWLLlTSXzWQzxuSg4DiQUCpauz/EWjgk5TYQqX/kvn9pG1NpYfqg==" 
             crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     
     <script>
@@ -409,35 +407,83 @@
             // 綁定事件監聽器
             bindEventListeners();
             
-            // 延遲初始化地圖，確保DOM完全準備就緒
-            setTimeout(function() {
-                initializeMap();
-            }, 300);
+            // 檢查Leaflet是否已載入
+            checkLeafletAndInitMap();
             
             console.log(`成功載入 ${resources.length} 筆福利資源`);
         }
         
+        // 檢查Leaflet並初始化地圖
+        function checkLeafletAndInitMap() {
+            let attempts = 0;
+            const maxAttempts = 20;
+            
+            function tryInitMap() {
+                attempts++;
+                
+                if (typeof L !== 'undefined' && L.map) {
+                    console.log('Leaflet 已載入，初始化地圖');
+                    setTimeout(initializeMap, 100);
+                } else if (attempts < maxAttempts) {
+                    console.log(`等待 Leaflet 載入... (${attempts}/${maxAttempts})`);
+                    setTimeout(tryInitMap, 200);
+                } else {
+                    console.log('Leaflet 載入失敗，切換到純列表模式');
+                    showListOnlyMode();
+                }
+            }
+            
+            tryInitMap();
+        }
+        
         function initializeMap() {
             try {
+                console.log('開始初始化地圖...');
+                
                 if (typeof L === 'undefined') {
                     throw new Error('Leaflet 庫未載入');
                 }
+                
+                const mapElement = document.getElementById('map');
+                if (!mapElement) {
+                    throw new Error('找不到地圖容器元素');
+                }
+                
+                console.log('創建地圖實例...');
                 
                 // 創建地圖
                 map = L.map('map', {
                     center: [24.9936, 121.3010],
                     zoom: 13,
                     zoomControl: true,
-                    attributionControl: true
+                    attributionControl: true,
+                    preferCanvas: false
                 });
                 
+                console.log('添加地圖圖層...');
+                
                 // 添加圖層
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                const tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                     attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
                     maxZoom: 19,
                     minZoom: 10,
                     crossOrigin: true
-                }).addTo(map);
+                });
+                
+                tileLayer.addTo(map);
+                
+                // 監聽圖層載入事件
+                tileLayer.on('loading', function() {
+                    console.log('地圖圖層開始載入...');
+                });
+                
+                tileLayer.on('load', function() {
+                    console.log('地圖圖層載入完成');
+                });
+                
+                tileLayer.on('tileerror', function(e) {
+                    console.log('地圖圖磚載入錯誤:', e);
+                });
                 
                 // 創建標記圖層
                 markersLayer = L.layerGroup().addTo(map);
@@ -450,12 +496,17 @@
                     // 強制地圖重新渲染
                     setTimeout(function() {
                         map.invalidateSize();
-                        console.log(`地圖初始化成功 - 顯示 ${markers.length} 個資源標記`);
-                    }, 100);
+                        console.log(`地圖初始化完成 - 顯示 ${markers.length} 個資源標記`);
+                    }, 200);
+                });
+                
+                // 添加地圖點擊事件用於調試
+                map.on('click', function(e) {
+                    console.log('地圖點擊:', e.latlng);
                 });
                 
             } catch (error) {
-                console.log('地圖初始化失敗:', error);
+                console.error('地圖初始化失敗:', error);
                 showListOnlyMode();
             }
         }
@@ -675,4 +726,3 @@
     </script>
 </body>
 </html>
-
