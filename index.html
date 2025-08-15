@@ -10,6 +10,33 @@
           integrity="sha512-h9FcoyWjHcOcmEVkxOfTLnmZFWIH0iZhZT1H2TbOq55xssQGEJHEaIm+PgoUaZbRvQTNTluNOEfb1ZRy6D3BOw==" 
           crossorigin="anonymous" referrerpolicy="no-referrer" />
     
+    <!-- 備用Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" 
+          crossorigin="" />
+    
+    <!-- 錯誤處理和資源載入檢查 -->
+    <script>
+        // 檢查資源載入狀態
+        window.resourceLoadStatus = {
+            leafletCSS: false,
+            leafletJS: false
+        };
+        
+        // 檢查CSS是否載入成功
+        document.addEventListener('DOMContentLoaded', function() {
+            const links = document.querySelectorAll('link[href*="leaflet"]');
+            links.forEach(link => {
+                link.addEventListener('load', () => {
+                    window.resourceLoadStatus.leafletCSS = true;
+                    console.log('Leaflet CSS 載入成功');
+                });
+                link.addEventListener('error', () => {
+                    console.error('Leaflet CSS 載入失敗');
+                });
+            });
+        });
+    </script>
+    
     <style>
         /* 自定義應用樣式 */
         body {
@@ -47,6 +74,8 @@
             flex: 1;
             height: 100%;
             min-height: 400px;
+            width: 100%;
+            position: relative;
         }
         
         .filter-section {
@@ -175,6 +204,27 @@
 <body>
     <header>
         <h1>福利資源地圖</h1>
+        <div style="margin-top: 10px;">
+            <button onclick="refreshMap()" style="
+                background: rgba(255,255,255,0.2);
+                border: 1px solid rgba(255,255,255,0.5);
+                color: white;
+                padding: 5px 10px;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 12px;
+                margin-right: 5px;
+            ">重新整理地圖</button>
+            <button onclick="diagnoseMap()" style="
+                background: rgba(255,255,255,0.1);
+                border: 1px solid rgba(255,255,255,0.3);
+                color: white;
+                padding: 5px 10px;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 12px;
+            ">診斷地圖</button>
+        </div>
     </header>
     
     <div class="container">
@@ -211,7 +261,30 @@
     <!-- Leaflet JavaScript -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js" 
             integrity="sha512-BwHfrr4c9kmRkLw6iXFdzcdWV/PGkVgiIyIWLLlTSXzWQzxuSg4DiQUCpauz/EWjgk5TYQqX/kvn9pG1NpYfqg==" 
-            crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            crossorigin="anonymous" referrerpolicy="no-referrer"
+            onload="window.resourceLoadStatus.leafletJS = true; console.log('主要Leaflet JS載入成功');"
+            onerror="console.error('主要Leaflet JS載入失敗，嘗試備用源'); loadBackupLeaflet();"></script>
+    
+    <!-- 備用載入腳本 -->
+    <script>
+        function loadBackupLeaflet() {
+            const script = document.createElement('script');
+            script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+            script.crossOrigin = '';
+            script.onload = function() {
+                window.resourceLoadStatus.leafletJS = true;
+                console.log('備用Leaflet JS載入成功');
+                // 確保應用在備用資源載入後重新初始化
+                setTimeout(initApp, 100);
+            };
+            script.onerror = function() {
+                console.error('備用Leaflet JS也載入失敗');
+                document.getElementById('resource-list').innerHTML = 
+                    '<div class="loading" style="color: red;">地圖資源載入失敗，請檢查網路連接</div>';
+            };
+            document.head.appendChild(script);
+        }
+    </script>
     
     <script>
         // 調試模式
@@ -261,8 +334,8 @@
             {id: 'CH007', name: '財團法人臺灣省桃園縣福音信義會', category: 'church', address: '桃園市桃園區大豐路222號', phone: '364-5900', lat: 24.9966, lng: 121.3000},
             {id: 'CH008', name: '財團法人臺灣基督長老教會桃園教會', category: 'church', address: '桃園市桃園區民生路208號6樓', phone: '332-4063', lat: 24.9886, lng: 121.3040},
             {id: 'CH009', name: '財團法人沙爾德聖保祿修女會', category: 'church', address: '桃園市桃園區建新街123號', phone: '361-3141', lat: 24.9946, lng: 121.2980},
-            {id: 'CH010', name: '財團法人臺灣省桃園縣中華福音道路德會仁愛堂區會', category: 'church', address: '桃園市桃園區縣府路110號13樓', phone: '362-5539', lat: 24.9926, lng: 121.3060},
-            {id: 'CH011', name: '財團法人桃園市臺灣基督長老教會迦南教會', category: 'church', address: '桃園市桃園區中華路49號', phone: '333-9075', lat: 24.9956, lng: 121.3015},
+            {id: 'CH010', name: '財團法人臺灣省桃園市中華福音道路德會仁愛堂區會', category: 'church', address: '桃園市桃園區縣府路110號13樓', phone: '362-5539', lat: 24.9926, lng: 121.3060},
+            {id: 'CH011', name: '財團法人桃園縣臺灣基督長老教會迦南教會', category: 'church', address: '桃園市桃園區中華路49號', phone: '333-9075', lat: 24.9956, lng: 121.3015},
             {id: 'CH012', name: '財團法人臺灣省桃園市桃園市中華基督教浸信會溢恩堂', category: 'church', address: '桃園市桃園市桃園區東國街55號', phone: '335-3106', lat: 24.9936, lng: 121.2995},
 
             // 基金會資源
@@ -273,12 +346,12 @@
             {id: 'FD005', name: '財團法人桃園市私立天立社會福利基金會', category: 'foundation', address: '桃園市桃園區樹仁三街601號', phone: '367-7666', lat: 24.9886, lng: 121.3060},
             {id: 'FD006', name: '財團法人桃園市私立元極康福慈善事業基金會', category: 'foundation', address: '桃園市桃園區莊敬路一段128號2樓', phone: '326-2677', lat: 24.9916, lng: 121.2990},
             {id: 'FD007', name: '財團法人桃園市忠義社會福利慈善事業基金會', category: 'foundation', address: '桃園市桃園區大有路80號', phone: '333-7748', lat: 24.9956, lng: 121.3050},
-            {id: 'FD008', name: '財團法人桃園市淳法宏善基金會', category: 'foundation', address: '桃園市桃園區三元街407巷50號', phone: '332-8253', lat: 24.9976, lng: 121.3010},
+            {id: 'FD008', name: '財團法人桃園市淳皓宏善基金會', category: 'foundation', address: '桃園市桃園區三元街407巷50號', phone: '332-8253', lat: 24.9976, lng: 121.3010},
             {id: 'FD009', name: '財團法人桃園市福島健康慈善基金會', category: 'foundation', address: '桃園市桃園區泰成路62巷39號2樓', phone: '0932-362847', lat: 24.9896, lng: 121.2970},
             {id: 'FD010', name: '財團法人桃園市優勝地社會福利基金會', category: 'foundation', address: '桃園市桃園區中平路98號3樓之3', phone: '2541-8098', lat: 24.9936, lng: 121.3030},
             {id: 'FD011', name: '財團法人腦性麻痺基金會', category: 'foundation', address: '桃園市桃園區中正路915號6樓之4', phone: '0916-577558', lat: 24.9906, lng: 121.2985},
-            {id: 'FD012', name: '財團法人桃園市愛家社會福利基金會', category: 'foundation', address: '桃園市桃園區復興路255號13樓', phone: '336-8228', lat: 24.9966, lng: 121.3005},
-            {id: 'FD013', name: '財團法人桃園市私立景福宮智能障礙者基金會', category: 'foundation', address: '桃園市桃園區中正路220號', phone: '332-9622', lat: 24.9886, lng: 121.3045},
+            {id: 'FD012', name: '財團法人桃園縣愛家社會福利基金會', category: 'foundation', address: '桃園市桃園區復興路255號13樓', phone: '336-8228', lat: 24.9966, lng: 121.3005},
+            {id: 'FD013', name: '財團法人桃園縣私立景福宮智能障礙者基金會', category: 'foundation', address: '桃園市桃園區中正路220號', phone: '332-9622', lat: 24.9886, lng: 121.3045},
             {id: 'FD014', name: '財團法人基督復臨安息日會醫療財團法人', category: 'foundation', address: '桃園市桃園區復興路195號', phone: '361-3141', lat: 24.9946, lng: 121.2975},
             {id: 'FD015', name: '財團法人桃園縣私立慈德殘障福利基金會', category: 'foundation', address: '桃園市桃園區中山路680號', phone: '333-5566', lat: 24.9926, lng: 121.3055},
 
@@ -354,26 +427,97 @@
             }
             
             try {
+                // 檢查必要資源是否載入
+                if (!window.resourceLoadStatus.leafletJS) {
+                    debugLog('等待Leaflet JS載入完成...');
+                    setTimeout(initApp, 200);
+                    return;
+                }
+                
                 // 創建地圖，中心點設在桃園市
-                map = L.map('map').setView([24.9936, 121.3010], 13);
+                map = L.map('map', {
+                    preferCanvas: false,
+                    zoomControl: true,
+                    attributionControl: true,
+                    maxZoom: 18,
+                    minZoom: 10
+                }).setView([24.9936, 121.3010], 13);
                 
-                // 添加 OpenStreetMap 圖層，包含錯誤處理
-                const tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-                    maxZoom: 19,
-                    errorTileUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=='
-                });
+                // 使用多個瓦片服務器作為備用
+                const tileUrls = [
+                    'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+                    'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                    'https://{s}.tile.openstreetmap.de/{z}/{x}/{y}.png'
+                ];
                 
-                tileLayer.on('tileerror', function(error) {
-                    debugLog('瓦片載入錯誤:', error);
-                });
+                let tileLayerLoaded = false;
+                let currentTileIndex = 0;
                 
-                tileLayer.addTo(map);
+                function tryLoadTileLayer(index = 0) {
+                    if (index >= tileUrls.length) {
+                        debugLog('所有瓦片服務器都載入失敗');
+                        document.getElementById('resource-list').innerHTML = 
+                            '<div class="loading" style="color: red;">地圖瓦片載入失敗，但資源數據仍可使用</div>';
+                        return;
+                    }
+                    
+                    const tileLayer = L.tileLayer(tileUrls[index], {
+                        attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+                        maxZoom: 18,
+                        tileSize: 256,
+                        timeout: 10000,
+                        errorTileUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=='
+                    });
+                    
+                    tileLayer.on('tileerror', function(error) {
+                        if (!tileLayerLoaded) {
+                            debugLog(`瓦片服務器 ${index + 1} 載入錯誤:`, error);
+                            debugLog(`嘗試下一個瓦片服務器...`);
+                            map.removeLayer(tileLayer);
+                            tryLoadTileLayer(index + 1);
+                        }
+                    });
+                    
+                    tileLayer.on('tileload', function() {
+                        if (!tileLayerLoaded) {
+                            tileLayerLoaded = true;
+                            debugLog(`瓦片服務器 ${index + 1} 載入成功`);
+                        }
+                    });
+                    
+                    tileLayer.addTo(map);
+                    currentTileIndex = index;
+                    
+                    // 設定超時，如果5秒內沒有成功載入瓦片，嘗試下一個
+                    setTimeout(() => {
+                        if (!tileLayerLoaded && index < tileUrls.length - 1) {
+                            debugLog(`瓦片服務器 ${index + 1} 超時，嘗試下一個`);
+                            map.removeLayer(tileLayer);
+                            tryLoadTileLayer(index + 1);
+                        }
+                    }, 5000);
+                }
+                
+                // 嘗試載入瓦片層
+                tryLoadTileLayer();
                 
                 // 創建標記圖層群組
                 markersLayer = L.layerGroup().addTo(map);
                 
                 resources = resourcesData;
+                
+                // 強制地圖大小重新計算
+                setTimeout(function() {
+                    map.invalidateSize(true);
+                    debugLog('強制重新計算地圖大小');
+                }, 100);
+                
+                // 再次重新計算，確保地圖完全載入
+                setTimeout(function() {
+                    map.invalidateSize(true);
+                    map.setView([24.9936, 121.3010], 13);
+                    debugLog('第二次重新計算地圖大小');
+                }, 500);
                 
                 // 創建標記
                 createMarkers();
@@ -389,10 +533,38 @@
                 // 地圖載入完成後的處理
                 map.whenReady(function() {
                     debugLog('地圖準備就緒');
-                    // 強制重新計算地圖大小
+                    // 多次強制重新計算地圖大小，確保完整顯示
                     setTimeout(function() {
-                        map.invalidateSize();
+                        map.invalidateSize(true);
+                        debugLog('地圖準備就緒後重新計算大小');
+                    }, 200);
+                    
+                    setTimeout(function() {
+                        map.invalidateSize(true);
+                        debugLog('最終重新計算地圖大小');
+                    }, 1000);
+                });
+                
+                // 監聽窗口大小變化
+                window.addEventListener('resize', function() {
+                    setTimeout(function() {
+                        if (map) {
+                            map.invalidateSize(true);
+                            debugLog('窗口大小變化，重新計算地圖');
+                        }
                     }, 100);
+                });
+                
+                // 添加網路狀態檢查
+                window.addEventListener('online', function() {
+                    debugLog('網路重新連接，嘗試重新載入瓦片');
+                    if (map && !tileLayerLoaded) {
+                        tryLoadTileLayer(0);
+                    }
+                });
+                
+                window.addEventListener('offline', function() {
+                    debugLog('網路斷線');
                 });
                 
             } catch (error) {
@@ -403,58 +575,66 @@
         
         // 創建標記
         function createMarkers() {
-            resources.forEach(resource => {
-                // 創建自定義圖標
-                const icon = L.divIcon({
-                    className: 'custom-marker',
-                    html: `<div style="
-                        background-color: ${categoryColors[resource.category]};
-                        width: 20px;
-                        height: 20px;
-                        border-radius: 50%;
-                        border: 2px solid white;
-                        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-                    "></div>`,
-                    iconSize: [20, 20],
-                    iconAnchor: [10, 10]
-                });
-                
-                // 創建標記
-                const marker = L.marker([resource.lat, resource.lng], { icon: icon });
-                
-                // 創建彈出窗口內容
-                const popupContent = `
-                    <div class="popup-content">
-                        <h3>${resource.name}</h3>
-                        <p><strong>類型:</strong> ${categoryNames[resource.category]}</p>
-                        <p><strong>地址:</strong> ${resource.address}</p>
-                        <p><strong>電話:</strong> ${resource.phone}</p>
-                        <div>
-                            <button class="route-btn" onclick="showRoute('${resource.address}')">
-                                Google Maps 導航
-                            </button>
+            try {
+                resources.forEach(resource => {
+                    // 創建自定義圖標
+                    const icon = L.divIcon({
+                        className: 'custom-marker',
+                        html: `<div style="
+                            background-color: ${categoryColors[resource.category]};
+                            width: 20px;
+                            height: 20px;
+                            border-radius: 50%;
+                            border: 2px solid white;
+                            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+                        "></div>`,
+                        iconSize: [20, 20],
+                        iconAnchor: [10, 10]
+                    });
+                    
+                    // 創建標記
+                    const marker = L.marker([resource.lat, resource.lng], { icon: icon });
+                    
+                    // 創建彈出窗口內容
+                    const popupContent = `
+                        <div class="popup-content">
+                            <h3>${resource.name}</h3>
+                            <p><strong>類型:</strong> ${categoryNames[resource.category]}</p>
+                            <p><strong>地址:</strong> ${resource.address}</p>
+                            <p><strong>電話:</strong> ${resource.phone}</p>
+                            <div>
+                                <button class="route-btn" onclick="showRoute('${resource.address}')">
+                                    Google Maps 導航
+                                </button>
+                            </div>
                         </div>
-                    </div>
-                `;
-                
-                marker.bindPopup(popupContent, {
-                    className: 'custom-popup'
+                    `;
+                    
+                    marker.bindPopup(popupContent, {
+                        className: 'custom-popup'
+                    });
+                    
+                    // 標記點擊事件
+                    marker.on('click', function() {
+                        updateActiveResourceItem(resource.id);
+                    });
+                    
+                    // 添加到標記圖層
+                    markersLayer.addLayer(marker);
+                    
+                    // 存儲標記信息
+                    markers.push({
+                        marker: marker,
+                        resource: resource
+                    });
                 });
                 
-                // 標記點擊事件
-                marker.on('click', function() {
-                    updateActiveResourceItem(resource.id);
-                });
+                debugLog(`成功創建 ${markers.length} 個標記`);
                 
-                // 添加到標記圖層
-                markersLayer.addLayer(marker);
-                
-                // 存儲標記信息
-                markers.push({
-                    marker: marker,
-                    resource: resource
-                });
-            });
+            } catch (error) {
+                debugLog('創建標記時發生錯誤:', error);
+                document.getElementById('resource-list').innerHTML += '<div style="color: red; margin-top: 10px;">標記創建失敗: ' + error.message + '</div>';
+            }
         }
         
         // 顯示路線
@@ -564,8 +744,99 @@
         // 頁面載入完成後初始化
         document.addEventListener('DOMContentLoaded', function() {
             debugLog('DOM 載入完成，初始化應用程序');
+            
+            // 檢查必要的元素是否存在
+            const mapElement = document.getElementById('map');
+            const resourceList = document.getElementById('resource-list');
+            
+            if (!mapElement) {
+                console.error('找不到地圖容器元素');
+                return;
+            }
+            
+            if (!resourceList) {
+                console.error('找不到資源列表元素');
+                return;
+            }
+            
+            // 確保地圖容器有正確的尺寸
+            mapElement.style.minHeight = '400px';
+            mapElement.style.width = '100%';
+            mapElement.style.height = '100%';
+            
+            // 開始初始化
             initApp();
         });
+        
+        // 額外的載入檢查
+        window.addEventListener('load', function() {
+            debugLog('視窗完全載入');
+            // 如果地圖還沒初始化，再試一次
+            if (typeof map === 'undefined' || !map) {
+                debugLog('地圖未初始化，嘗試重新初始化');
+                setTimeout(initApp, 500);
+            } else {
+                // 強制重新計算地圖大小
+                setTimeout(function() {
+                    if (map) {
+                        map.invalidateSize(true);
+                        debugLog('視窗載入完成後重新計算地圖大小');
+                    }
+                }, 1000);
+            }
+        });
+        
+        // 添加手動重新整理地圖的功能
+        window.refreshMap = function() {
+            debugLog('手動重新整理地圖');
+            
+            if (map) {
+                try {
+                    // 清除現有標記
+                    if (markersLayer) {
+                        markersLayer.clearLayers();
+                    }
+                    
+                    // 重置標記陣列
+                    markers = [];
+                    
+                    // 強制重新計算地圖大小
+                    map.invalidateSize(true);
+                    map.setView([24.9936, 121.3010], 13);
+                    
+                    // 重新創建標記
+                    createMarkers();
+                    
+                    // 重新應用過濾器
+                    filterResources();
+                    
+                    debugLog('地圖重新整理完成');
+                    
+                } catch (error) {
+                    debugLog('重新整理地圖時發生錯誤:', error);
+                }
+            } else {
+                debugLog('地圖未初始化，嘗試重新初始化');
+                initApp();
+            }
+        };
+        
+        // 添加診斷功能
+        window.diagnoseMap = function() {
+            console.log('=== 地圖診斷資訊 ===');
+            console.log('Leaflet 是否載入:', typeof L !== 'undefined');
+            console.log('地圖是否初始化:', typeof map !== 'undefined' && map !== null);
+            console.log('資源載入狀態:', window.resourceLoadStatus);
+            console.log('資源數量:', resources ? resources.length : '未定義');
+            console.log('標記數量:', markers ? markers.length : '未定義');
+            console.log('網路狀態:', navigator.onLine ? '線上' : '離線');
+            
+            if (map) {
+                console.log('地圖中心:', map.getCenter());
+                console.log('地圖縮放級別:', map.getZoom());
+                console.log('地圖容器大小:', map.getSize());
+            }
+        };
     </script>
 </body>
 </html>
